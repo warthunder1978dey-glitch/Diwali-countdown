@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#100b25" />
+  <meta name="description" content="A live Diwali countdown with a working calendar and custom date selector." />
+  <title>Diwali Countdown — Festival of Lights</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #100b25;
+      --panel: rgba(31, 22, 58, .78);
+      --panel-strong: #21173c;
+      --border: rgba(255, 226, 177, .15);
+      --text: #fff8ed;
+      --muted: #bcb3d1;
+      --gold: #ffca73;
+      --orange: #ff875f;
+      --pink: #ed75b9;
+      --green: #a4e5c2;
+      --shadow: 0 24px 70px rgba(0, 0, 0, .25);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 13% 5%, rgba(147, 68, 149, .25), transparent 32rem),
+        radial-gradient(ellipse at 88% 24%, rgba(255, 140, 83, .14), transparent 30rem),
+        linear-gradient(145deg, #0d0a20 0%, #17102e 54%, #25112e 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow-x: hidden;
+    }
+    body::before, body::after {
+      content: ""; position: fixed; pointer-events: none; z-index: -1; border-radius: 50%; filter: blur(2px);
+    }
+    body::before { width: 7px; height: 7px; top: 13%; left: 8%; background: var(--gold); box-shadow: 0 0 18px 4px rgba(255,202,115,.35), 18vw 12vh 0 -2px #ffc773, 42vw 5vh 0 -1px #ffab79, 68vw 16vh 0 -2px #e8a6ff, 83vw 7vh 0 -1px #ffd38a, 54vw 45vh 0 -2px #ffbf86; }
+    body::after { width: 4px; height: 4px; top: 32%; left: 95%; background: #f3b5ff; box-shadow: -21vw 18vh 0 1px rgba(255,202,115,.8), -70vw 30vh 0 1px rgba(255,202,115,.75), -48vw 3vh 0 0 rgba(255,202,115,.5); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+    .page { width: min(1160px, calc(100% - 36px)); margin: 0 auto; padding-bottom: 32px; }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 26px 0 32px; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; letter-spacing: .03em; }
+    .brand-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: linear-gradient(145deg, #ffd37c, #ff8a5d); color: #341532; font-size: 22px; box-shadow: 0 8px 28px rgba(255, 142, 85, .22); }
+    .brand small { display: block; margin-top: 2px; font-size: 10px; letter-spacing: .23em; color: var(--muted); font-weight: 700; }
+    .today-pill { color: var(--muted); border: 1px solid var(--border); background: rgba(255,255,255,.04); border-radius: 999px; padding: 10px 14px; font-size: 12px; white-space: nowrap; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(350px, .88fr); gap: 22px; align-items: stretch; }
+    .panel { border: 1px solid var(--border); border-radius: 26px; background: var(--panel); box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .hero { padding: clamp(26px, 4.5vw, 52px); position: relative; overflow: hidden; min-height: 550px; display: flex; flex-direction: column; }
+    .hero::after { content: "✦"; position: absolute; right: 26px; top: 26px; font-size: 32px; color: rgba(255, 203, 120, .6); text-shadow: 0 0 26px rgba(255, 168, 98, .4); }
+    .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: var(--gold); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; font-weight: 800; margin-bottom: 18px; }
+    .eyebrow::before { content: ""; width: 24px; height: 1px; background: var(--gold); }
+    h1 { font-size: clamp(37px, 5vw, 62px); line-height: .99; letter-spacing: -.055em; margin: 0; max-width: 640px; }
+    h1 span { color: var(--gold); }
+    .intro { color: var(--muted); line-height: 1.65; font-size: 14px; max-width: 420px; margin: 20px 0 23px; }
+    .date-chip { display: inline-flex; gap: 11px; align-items: center; align-self: flex-start; padding: 11px 14px; border-radius: 13px; border: 1px solid rgba(255, 202, 115, .25); background: rgba(255, 202, 115, .07); margin-bottom: 24px; }
+    .date-icon { color: var(--gold); font-size: 18px; }
+    .date-chip strong { font-size: 13px; display: block; }
+    .date-chip small { color: var(--muted); font-size: 11px; display: block; margin-top: 3px; }
+    .countdown { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: auto; }
+    .time-box { min-width: 0; padding: 16px 8px 14px; text-align: center; border-radius: 16px; background: linear-gradient(155deg, rgba(255,255,255,.075), rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.09); }
+    .time-value { font-size: clamp(27px, 4vw, 42px); font-weight: 800; line-height: 1.05; letter-spacing: -.05em; font-variant-numeric: tabular-nums; }
+    .time-label { margin-top: 8px; font-size: 9px; letter-spacing: .18em; color: var(--muted); text-transform: uppercase; font-weight: 800; }
+    .status { min-height: 20px; color: var(--green); font-size: 12px; margin-top: 15px; }
+    .hero-bottom { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .btn { border: 1px solid transparent; border-radius: 12px; padding: 11px 15px; font-size: 12px; font-weight: 750; transition: transform .15s, background .15s, border-color .15s; }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-primary { background: linear-gradient(120deg, var(--gold), #ff9f68); color: #30142d; box-shadow: 0 8px 22px rgba(255, 156, 96, .16); }
+    .btn-secondary { background: rgba(255,255,255,.045); color: var(--text); border-color: var(--border); }
+    .calendar-panel { padding: 26px; min-height: 550px; display: flex; flex-direction: column; }
+    .calendar-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 5px; }
+    .calendar-head h2 { margin: 0; letter-spacing: -.03em; font-size: 23px; }
+    .cal-arrows { display: flex; gap: 7px; }
+    .icon-btn { width: 34px; height: 34px; border: 1px solid var(--border); background: rgba(255,255,255,.04); color: var(--text); border-radius: 10px; font-size: 18px; }
+    .month-caption { color: var(--muted); font-size: 12px; margin: 4px 0 20px; }
+    .weekdays, .days-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+    .weekday { color: #9389b2; font-size: 10px; font-weight: 800; text-transform: uppercase; text-align: center; padding: 8px 0; }
+    .day { position: relative; aspect-ratio: 1; min-width: 0; border: 1px solid transparent; border-radius: 11px; background: transparent; color: #e8e0f8; display: flex; align-items: center; justify-content: center; font-size: 12px; font-variant-numeric: tabular-nums; }
+    .day:hover { background: rgba(255,255,255,.08); }
+    .day.outside { color: #685f7d; }
+    .day.today { border-color: rgba(255,255,255,.5); }
+    .day.festival { background: linear-gradient(145deg, #ffcd78, #ff8d67); color: #371530; font-weight: 900; box-shadow: 0 5px 18px rgba(255, 148, 88, .25); }
+    .day.selected { outline: 2px solid var(--pink); outline-offset: 1px; }
+    .day .dot { position: absolute; bottom: 4px; width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+    .calendar-legend { display: flex; align-items: center; gap: 15px; margin: 16px 0 19px; color: var(--muted); font-size: 10px; }
+    .legend-item { display: inline-flex; gap: 6px; align-items: center; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 3px; background: var(--gold); }
+    .legend-dot.today-dot { border: 1px solid rgba(255,255,255,.75); background: transparent; }
+    .target-tools { margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.08); }
+    .target-tools label { display: block; color: var(--muted); font-size: 11px; font-weight: 700; margin-bottom: 8px; }
+    .date-row { display: flex; gap: 8px; }
+    input[type="date"] { min-width: 0; width: 100%; padding: 10px 11px; color: var(--text); background: rgba(8,5,21,.45); border: 1px solid var(--border); border-radius: 11px; font-size: 12px; }
+    input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; filter: invert(.9); }
+    .tools-foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .tools-foot .btn { padding: 9px 11px; font-size: 11px; }
+    .feature-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 20px; }
+    .feature { border: 1px solid var(--border); background: rgba(255,255,255,.035); padding: 18px; border-radius: 18px; }
+    .feature-icon { font-size: 19px; color: var(--gold); margin-bottom: 10px; }
+    .feature strong { font-size: 12px; display: block; margin-bottom: 5px; }
+    .feature p { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 0; }
+    footer { padding: 24px 0 8px; color: #8e83a8; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 10px; }
+    .toast { position: fixed; left: 50%; bottom: 25px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: #fff3dc; color: #2a1730; padding: 12px 16px; border-radius: 12px; box-shadow: var(--shadow); font-size: 12px; font-weight: 750; transition: all .25s; z-index: 10; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .hero, .calendar-panel { min-height: auto; } .hero { min-height: 500px; } .calendar-panel { min-height: 530px; } .intro { max-width: 600px; } }
+    @media (max-width: 520px) { .page { width: min(100% - 22px, 1160px); } header { padding: 18px 0 20px; align-items: flex-start; } .today-pill { padding: 8px 10px; font-size: 10px; } .brand-icon { width: 38px; height: 38px; } .brand { font-size: 13px; } .hero { padding: 25px 20px; min-height: 510px; border-radius: 22px; } .calendar-panel { padding: 20px 15px; border-radius: 22px; } h1 { font-size: 44px; } .countdown { gap: 6px; } .time-box { padding: 14px 4px 12px; border-radius: 12px; } .time-label { font-size: 8px; letter-spacing: .1em; } .time-value { font-size: 30px; } .feature-strip { grid-template-columns: 1fr; gap: 8px; } .feature { display: flex; gap: 12px; align-items: flex-start; padding: 14px; } .feature-icon { margin: 0; } .calendar-legend { gap: 11px; } .day { border-radius: 8px; } }
+    .skyshow-overlay {
+      position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+      padding: 18px; overflow: hidden; visibility: hidden; opacity: 0; pointer-events: none;
+      background: radial-gradient(ellipse at 50% 100%, rgba(111, 35, 86, .28), transparent 55%), rgba(5, 4, 17, .94);
+      transition: opacity .35s ease, visibility .35s ease;
+    }
+    .skyshow-overlay.active { visibility: visible; opacity: 1; pointer-events: auto; }
+    #fireworks-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+    .skyshow-card {
+      position: relative; z-index: 2; width: min(100%, 590px); padding: clamp(28px, 6vw, 55px);
+      text-align: center; border: 1px solid rgba(255, 218, 154, .35); border-radius: 28px;
+      background: linear-gradient(145deg, rgba(35, 20, 58, .78), rgba(14, 10, 32, .76));
+      box-shadow: 0 24px 100px rgba(0,0,0,.35), 0 0 65px rgba(255, 174, 87, .1);
+      backdrop-filter: blur(10px); transform: translateY(12px) scale(.985); transition: transform .35s ease;
+    }
+    .skyshow-overlay.active .skyshow-card { transform: translateY(0) scale(1); }
+    .skyshow-kicker { color: var(--gold); font-size: 10px; font-weight: 900; letter-spacing: .24em; text-transform: uppercase; }
+    .skyshow-title { margin: 13px 0 12px; color: #fff6e8; font-size: clamp(34px, 8vw, 66px); line-height: .98; letter-spacing: -.055em; text-shadow: 0 0 28px rgba(255, 170, 78, .28); }
+    .skyshow-title span { display: block; margin-top: 7px; color: var(--gold); }
+    .skyshow-copy { max-width: 400px; margin: 0 auto; color: #e4d9ee; line-height: 1.6; font-size: 14px; }
+    .skyshow-actions { display: flex; justify-content: center; gap: 9px; flex-wrap: wrap; margin-top: 25px; }
+    .skyshow-note { color: #bcb3d1; font-size: 10px; margin: 17px 0 0; }
+    .skyshow-burst-mark { font-size: 30px; margin-top: 20px; filter: drop-shadow(0 0 16px rgba(255, 205, 120, .55)); }
+    @media (max-width: 520px) {
+      .skyshow-overlay { padding: 12px; }
+      .skyshow-card { border-radius: 22px; }
+      .skyshow-title { font-size: clamp(34px, 11vw, 52px); }
+      .skyshow-copy { font-size: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+      .skyshow-card { transform: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"> दीप </div>
+        <div>DIWALI COUNTDOWN<small>THE FESTIVAL OF LIGHTS</small></div>
+      </div>
+      <div class="today-pill" id="india-clock" aria-live="off">Loading India time…</div>
+    </header>
+
+    <main class="layout">
+      <section class="panel hero" aria-labelledby="main-title">
+        <div class="eyebrow">A little closer to the light</div>
+        <h1 id="main-title">The brightest night is <span>on its way.</span></h1>
+        <p class="intro">Keep track of the days, hours, minutes, and seconds until Diwali. Your countdown updates live, and the calendar lets you check dates or set your own target.</p>
+        <div class="date-chip">
+          <span class="date-icon" aria-hidden="true">✦</span>
+          <div><strong id="target-date-label">Finding the next Diwali…</strong><small id="target-day-label">Indian Standard Time (IST)</small></div>
+        </div>
+        <div class="countdown" role="timer" aria-label="Countdown to Diwali">
+          <div class="time-box"><div class="time-value" id="days">—</div><div class="time-label">Days</div></div>
+          <div class="time-box"><div class="time-value" id="hours">—</div><div class="time-label">Hours</div></div>
+          <div class="time-box"><div class="time-value" id="minutes">—</div><div class="time-label">Minutes</div></div>
+          <div class="time-box"><div class="time-value" id="seconds">—</div><div class="time-label">Seconds</div></div>
+        </div>
+        <div class="status" id="countdown-status" aria-live="polite">Calculating your countdown…</div>
+        <div class="hero-bottom">
+          <button class="btn btn-primary" id="add-calendar-btn" type="button">＋ Add to calendar</button>
+          <button class="btn btn-secondary" id="copy-btn" type="button">Copy countdown</button>
+          <button class="btn btn-secondary" id="preview-skyshots" type="button" aria-label="Preview the Diwali skyshot celebration">✦ Preview skyshots</button>
+        </div>
+      </section>
+
+      <section class="panel calendar-panel" aria-labelledby="calendar-title">
+        <div class="calendar-head">
+          <h2 id="calendar-title">Calendar</h2>
+          <div class="cal-arrows">
+            <button type="button" class="icon-btn" id="prev-month" aria-label="Previous month">‹</button>
+            <button type="button" class="icon-btn" id="next-month" aria-label="Next month">›</button>
+          </div>
+        </div>
+        <div class="month-caption" id="month-caption">Select any date to start a custom countdown.</div>
+        <div class="weekdays" aria-hidden="true">
+          <div class="weekday">Sun</div><div class="weekday">Mon</div><div class="weekday">Tue</div><div class="weekday">Wed</div><div class="weekday">Thu</div><div class="weekday">Fri</div><div class="weekday">Sat</div>
+        </div>
+        <div class="days-grid" id="days-grid" role="group" aria-label="Calendar dates"></div>
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-dot"></span> Diwali</span>
+          <span class="legend-item"><span class="legend-dot today-dot"></span> Today</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--pink)"></span> Selected date</span>
+        </div>
+        <div class="target-tools">
+          <label for="custom-date">Choose a date for your countdown</label>
+          <div class="date-row">
+            <input id="custom-date" type="date" aria-label="Choose a custom countdown date" />
+            <button type="button" class="btn btn-primary" id="set-date-btn">Set date</button>
+          </div>
+          <div class="tools-foot">
+            <button type="button" class="btn btn-secondary" id="next-diwali-btn">Back to Diwali</button>
+            <button type="button" class="btn btn-secondary" id="today-btn">Go to today</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="feature-strip" aria-label="About the countdown">
+      <article class="feature"><div class="feature-icon" aria-hidden="true">◷</div><div><strong>Live countdown</strong><p>Seconds update automatically using the current time in India.</p></div></article>
+      <article class="feature"><div class="feature-icon" aria-hidden="true">▦</div><div><strong>Calendar you can use</strong><p>Move between months and tap any date to count down to it.</p></div></article>
+      <article class="feature"><div class="feature-icon" aria-hidden="true">✧</div><div><strong>Take it with you</strong><p>Download an event file for your calendar or copy your countdown text.</p></div></article>
+    </section>
+
+    <footer>
+      <span>Made for the countdown to the Festival of Lights.</span>
+      <span>Diwali dates can vary by regional calendar and local observance.</span>
+    </footer>
+  </div>
+  <section class="skyshow-overlay" id="skyshow-overlay" role="dialog" aria-modal="true" aria-labelledby="skyshow-title" aria-hidden="true">
+    <canvas id="fireworks-canvas" aria-hidden="true"></canvas>
+    <div class="skyshow-card">
+      <div class="skyshow-kicker" id="skyshow-kicker">THE COUNTDOWN HAS ENDED</div>
+      <h2 class="skyshow-title" id="skyshow-title">SHUBH <span>DEEPAVALI!</span></h2>
+      <p class="skyshow-copy" id="skyshow-copy">The moment is here. Look up — the night sky is lighting up for Diwali!</p>
+      <div class="skyshow-actions">
+        <button type="button" class="btn btn-primary" id="replay-skyshots">↻ Replay skyshots</button>
+        <button type="button" class="btn btn-secondary" id="close-skyshow">Close celebration</button>
+      </div>
+      <p class="skyshow-note">A little celebration from your Diwali countdown.</p>
+      <div class="skyshow-burst-mark" aria-hidden="true">✦ ✧ ✦</div>
+    </div>
+  </section>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // Indian Diwali dates from published Indian festival/holiday calendars.
+    // Update this list when dates for later years are officially confirmed.
+    const DIWALI_DATES = {
+      2026: '2026-11-08', 2027: '2027-10-29', 2028: '2028-10-17',
+      2029: '2029-11-05', 2030: '2030-10-26', 2031: '2031-11-14',
+      2032: '2032-11-02', 2033: '2033-10-22', 2034: '2034-11-10',
+      2035: '2035-10-30', 2036: '2036-10-18', 2037: '2037-11-07'
+    };
+    const IST = 'Asia/Kolkata';
+    const $ = (id) => document.getElementById(id);
+    let viewYear, viewMonth, selectedISO = null, targetMode = 'diwali', targetISO = null;
+    let toastTimer;
+    // Fireworks are triggered only when an active countdown crosses zero.
+    let lastCountdownTargetKey = null;
+    let lastRemainingForTarget = null;
+    const celebratedTargets = new Set();
+    let skyshotCanvas = null, skyshotContext = null;
+    let skyshotWidth = 0, skyshotHeight = 0, skyshotPixelRatio = 1;
+    let skyshotParticles = [], skyshotFrame = null, skyshotCloseTimer = null;
+    let skyshotActive = false, skyshotNextLaunchAt = 0, skyshotStopLaunchingAt = 0;
+    let skyshotPreviousFrameAt = 0, skyshotReturnFocus = null;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function indiaParts(date = new Date()) {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: IST, year: 'numeric', month: '2-digit', day: '2-digit'
+      }).formatToParts(date);
+      const out = {};
+      for (const part of parts) if (part.type !== 'literal') out[part.type] = Number(part.value);
+      return { year: out.year, month: out.month, day: out.day };
+    }
+    function isoFromParts(y, m, d) { return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+    function todayISO() { const p = indiaParts(); return isoFromParts(p.year, p.month, p.day); }
+    function isoParts(iso) {
+      const [year, month, day] = iso.split('-').map(Number);
+      return { year, month, day };
+    }
+    function utcDateOnly(iso) {
+      const p = isoParts(iso);
+      return Date.UTC(p.year, p.month - 1, p.day);
+    }
+    function diffCalendarDays(fromISO, toISO) { return Math.round((utcDateOnly(toISO) - utcDateOnly(fromISO)) / 86400000); }
+    // This instant is midnight at the start of the selected date in India (UTC+05:30).
+    function istMidnight(iso) { return new Date(`${iso}T00:00:00+05:30`); }
+    function formatDate(iso, opts = {}) {
+      const p = isoParts(iso);
+      return new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric', ...opts })
+        .format(new Date(Date.UTC(p.year, p.month - 1, p.day, 12)));
+    }
+    function formatWeekday(iso) {
+      const p = isoParts(iso);
+      return new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', weekday: 'long' }).format(new Date(Date.UTC(p.year, p.month - 1, p.day, 12)));
+    }
+    function upcomingDiwali() {
+      const today = todayISO();
+      for (const [year, date] of Object.entries(DIWALI_DATES).sort((a,b) => Number(a[0])-Number(b[0]))) {
+        if (date >= today) return { year: Number(year), date };
+      }
+      return null;
+    }
+    function setDiwaliTarget() {
+      const event = upcomingDiwali();
+      if (!event) {
+        showToast('Dates after 2037 are not loaded yet. Choose the date from the calendar.');
+        return;
+      }
+      targetMode = 'diwali';
+      targetISO = event.date;
+      selectedISO = event.date;
+      const p = isoParts(event.date);
+      viewYear = p.year; viewMonth = p.month - 1;
+      $('custom-date').value = targetISO;
+      renderCalendar(); renderTarget();
+    }
+    function setCustomTarget(iso) {
+      if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) { showToast('Choose a valid date first.'); return; }
+      const p = isoParts(iso);
+      const testDate = new Date(Date.UTC(p.year, p.month - 1, p.day));
+      if (testDate.getUTCFullYear() !== p.year || testDate.getUTCMonth() !== p.month - 1 || testDate.getUTCDate() !== p.day) {
+        showToast('That date is not valid.'); return;
+      }
+      targetMode = 'custom'; targetISO = iso; selectedISO = iso;
+      viewYear = p.year; viewMonth = p.month - 1;
+      $('custom-date').value = iso;
+      renderCalendar(); renderTarget();
+    }
+    function renderTarget() {
+      if (!targetISO && targetMode === 'diwali') {
+        const e = upcomingDiwali();
+        if (e) targetISO = e.date;
+      }
+      if (!targetISO) return;
+      const isDiwali = targetMode === 'diwali';
+      $('target-date-label').textContent = isDiwali ? `Diwali ${isoParts(targetISO).year} · ${formatDate(targetISO)}` : `Custom target · ${formatDate(targetISO)}`;
+      $('target-day-label').textContent = `${formatWeekday(targetISO)} · ${isDiwali ? 'India' : 'Your selected date'} · midnight IST`;
+      $('main-title').innerHTML = isDiwali ? 'The brightest night is <span>on its way.</span>' : 'Your next big day is <span>on its way.</span>';
+      $('month-caption').textContent = isDiwali
+        ? `Diwali is highlighted. Select any date to make a custom countdown.`
+        : `Counting down to ${formatDate(targetISO)}. Choose “Back to Diwali” to restore the festival date.`;
+      $('next-diwali-btn').textContent = isDiwali ? 'Diwali selected' : 'Back to Diwali';
+      updateCountdown();
+    }
+    function renderCalendar() {
+      const monthDate = new Date(Date.UTC(viewYear, viewMonth, 1, 12));
+      $('calendar-title').textContent = new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', month: 'long', year: 'numeric' }).format(monthDate);
+      const firstWeekday = new Date(Date.UTC(viewYear, viewMonth, 1)).getUTCDay();
+      const daysThisMonth = new Date(Date.UTC(viewYear, viewMonth + 1, 0)).getUTCDate();
+      const prevMonthDays = new Date(Date.UTC(viewYear, viewMonth, 0)).getUTCDate();
+      const today = todayISO();
+      const grid = $('days-grid'); grid.innerHTML = '';
+      // 6 rows are used so the calendar does not jump in height between months.
+      for (let i = 0; i < 42; i++) {
+        let day, monthOffset = 0;
+        if (i < firstWeekday) { day = prevMonthDays - firstWeekday + i + 1; monthOffset = -1; }
+        else if (i >= firstWeekday + daysThisMonth) { day = i - firstWeekday - daysThisMonth + 1; monthOffset = 1; }
+        else day = i - firstWeekday + 1;
+        const d = new Date(Date.UTC(viewYear, viewMonth + monthOffset, day, 12));
+        const iso = isoFromParts(d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate());
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'day'; btn.textContent = String(day);
+        btn.setAttribute('aria-label', `${formatDate(iso)}${DIWALI_DATES[isoParts(iso).year] === iso ? ', Diwali' : ''}`);
+        if (monthOffset !== 0) btn.classList.add('outside');
+        if (iso === today) btn.classList.add('today');
+        if (DIWALI_DATES[isoParts(iso).year] === iso) {
+          btn.classList.add('festival'); btn.title = 'Diwali';
+          const dot = document.createElement('span'); dot.className = 'dot'; dot.setAttribute('aria-hidden','true'); btn.appendChild(dot);
+        }
+        if (iso === selectedISO) btn.classList.add('selected');
+        btn.addEventListener('click', () => setCustomTarget(iso));
+        grid.appendChild(btn);
+      }
+    }
+    function resizeSkyshotCanvas() {
+      if (!skyshotCanvas || !skyshotContext) return;
+      skyshotWidth = window.innerWidth;
+      skyshotHeight = window.innerHeight;
+      skyshotPixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      skyshotCanvas.width = Math.max(1, Math.floor(skyshotWidth * skyshotPixelRatio));
+      skyshotCanvas.height = Math.max(1, Math.floor(skyshotHeight * skyshotPixelRatio));
+      skyshotContext.setTransform(skyshotPixelRatio, 0, 0, skyshotPixelRatio, 0, 0);
+    }
+
+    function launchSkyshot() {
+      const startX = skyshotWidth * (0.04 + Math.random() * 0.92);
+      const targetX = skyshotWidth * (0.08 + Math.random() * 0.84);
+      const targetY = skyshotHeight * (0.10 + Math.random() * 0.46);
+      const gravity = Math.max(420, skyshotHeight * 1.05);
+      const flightTime = Math.sqrt((2 * ((skyshotHeight + 8) - targetY)) / gravity);
+      const hueChoices = [24, 38, 48, 178, 202, 285, 320, 350];
+      skyshotParticles.push({
+        type: 'rocket', x: startX, y: skyshotHeight + 8, prevX: startX, prevY: skyshotHeight + 8,
+        vx: (targetX - startX) / flightTime, vy: -gravity * flightTime, gravity, targetY,
+        hue: hueChoices[Math.floor(Math.random() * hueChoices.length)]
+      });
+    }
+
+    function explodeSkyshot(x, y, hue) {
+      const shortSide = Math.min(skyshotWidth, skyshotHeight);
+      const particleCount = (shortSide < 520 ? 64 : 94) + Math.floor(Math.random() * 42);
+      const ringStyle = Math.random() < 0.24;
+      const rotation = Math.random() * Math.PI * 2;
+      for (let i = 0; i < particleCount; i++) {
+        const angle = ringStyle ? rotation + (Math.PI * 2 * i / particleCount) : Math.random() * Math.PI * 2;
+        const speed = shortSide * (ringStyle ? 0.50 + Math.random() * 0.28 : 0.24 + Math.random() * 0.70);
+        const life = 0.95 + Math.random() * 1.15;
+        skyshotParticles.push({
+          type: 'spark', x, y, prevX: x, prevY: y,
+          vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+          gravity: skyshotHeight * (0.20 + Math.random() * 0.18),
+          drag: 0.982 + Math.random() * 0.012, life, maxLife: life,
+          hue: (hue + (Math.random() * 40 - 20) + 360) % 360,
+          size: 0.7 + Math.random() * 1.8, twinkle: Math.random() < 0.18
+        });
+      }
+      // Add a bright central flash to make each burst read like a skyshot.
+      skyshotParticles.push({ type: 'flash', x, y, life: 0.16, maxLife: 0.16, hue });
+    }
+
+    function drawStaticSkyshots() {
+      if (!skyshotContext) return;
+      const points = [
+        [0.18, 0.25, 42], [0.78, 0.21, 300], [0.50, 0.15, 190],
+        [0.32, 0.43, 20], [0.86, 0.45, 45], [0.62, 0.36, 270]
+      ];
+      const base = Math.min(skyshotWidth, skyshotHeight);
+      skyshotContext.globalCompositeOperation = 'lighter';
+      for (const [px, py, hue] of points) {
+        const x = skyshotWidth * px, y = skyshotHeight * py;
+        for (let i = 0; i < 34; i++) {
+          const angle = (Math.PI * 2 * i / 34);
+          const radius = base * (0.035 + (i % 5) * 0.009);
+          skyshotContext.beginPath();
+          skyshotContext.moveTo(x + Math.cos(angle) * radius * 0.35, y + Math.sin(angle) * radius * 0.35);
+          skyshotContext.lineTo(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+          skyshotContext.strokeStyle = `hsla(${hue + i % 17}, 100%, 68%, .85)`;
+          skyshotContext.lineWidth = 1.7;
+          skyshotContext.stroke();
+        }
+        skyshotContext.beginPath();
+        skyshotContext.arc(x, y, 3.5, 0, Math.PI * 2);
+        skyshotContext.fillStyle = `hsl(${hue}, 100%, 78%)`;
+        skyshotContext.fill();
+      }
+      skyshotContext.globalCompositeOperation = 'source-over';
+    }
+
+    function animateSkyshots(now) {
+      if (!skyshotActive || !skyshotContext) return;
+      const dt = Math.min(Math.max((now - skyshotPreviousFrameAt) / 1000, 0.001), 0.035);
+      skyshotPreviousFrameAt = now;
+
+      // A transparent fade creates glowing trails without hiding the page's message.
+      skyshotContext.globalCompositeOperation = 'destination-out';
+      skyshotContext.fillStyle = 'rgba(0, 0, 0, 0.20)';
+      skyshotContext.fillRect(0, 0, skyshotWidth, skyshotHeight);
+      skyshotContext.globalCompositeOperation = 'lighter';
+
+      if (now < skyshotStopLaunchingAt && now >= skyshotNextLaunchAt) {
+        const launches = Math.random() < 0.42 ? 2 : 1;
+        for (let i = 0; i < launches; i++) launchSkyshot();
+        skyshotNextLaunchAt = now + 155 + Math.random() * 95;
+      }
+
+      for (let i = skyshotParticles.length - 1; i >= 0; i--) {
+        const f = skyshotParticles[i];
+        if (f.type === 'rocket') {
+          f.prevX = f.x; f.prevY = f.y;
+          f.x += f.vx * dt; f.y += f.vy * dt;
+          f.vy += f.gravity * dt;
+          skyshotContext.beginPath();
+          skyshotContext.moveTo(f.prevX, f.prevY);
+          skyshotContext.lineTo(f.x, f.y);
+          skyshotContext.strokeStyle = `hsla(${f.hue}, 100%, 76%, .98)`;
+          skyshotContext.lineWidth = 2.2;
+          skyshotContext.stroke();
+          if (f.y <= f.targetY || f.vy >= 0) {
+            explodeSkyshot(f.x, f.y, f.hue);
+            skyshotParticles.splice(i, 1);
+          }
+          continue;
+        }
+        if (f.type === 'flash') {
+          f.life -= dt;
+          if (f.life <= 0) { skyshotParticles.splice(i, 1); continue; }
+          skyshotContext.beginPath();
+          skyshotContext.arc(f.x, f.y, 3 + (1 - f.life / f.maxLife) * 12, 0, Math.PI * 2);
+          skyshotContext.fillStyle = `hsla(${f.hue}, 100%, 85%, ${f.life / f.maxLife})`;
+          skyshotContext.fill();
+          continue;
+        }
+        f.prevX = f.x; f.prevY = f.y;
+        f.x += f.vx * dt; f.y += f.vy * dt;
+        f.vy += f.gravity * dt;
+        const drag = Math.pow(f.drag, dt * 60);
+        f.vx *= drag; f.vy *= drag; f.life -= dt;
+        if (f.life <= 0) { skyshotParticles.splice(i, 1); continue; }
+        const alpha = Math.max(0, Math.min(1, f.life / f.maxLife));
+        const light = f.twinkle && Math.random() < 0.22 ? 88 : 65 + Math.random() * 15;
+        skyshotContext.beginPath();
+        skyshotContext.moveTo(f.prevX, f.prevY);
+        skyshotContext.lineTo(f.x, f.y);
+        skyshotContext.strokeStyle = `hsla(${f.hue}, 100%, ${light}%, ${alpha})`;
+        skyshotContext.lineWidth = Math.max(0.7, f.size * alpha);
+        skyshotContext.stroke();
+      }
+      skyshotContext.globalCompositeOperation = 'source-over';
+      skyshotFrame = requestAnimationFrame(animateSkyshots);
+    }
+
+    function startSkyshotShow() {
+      const overlay = $('skyshow-overlay');
+      if (!overlay.classList.contains('active')) skyshotReturnFocus = document.activeElement;
+      clearTimeout(skyshotCloseTimer);
+      if (skyshotFrame) cancelAnimationFrame(skyshotFrame);
+      skyshotActive = true;
+      skyshotParticles = [];
+      skyshotCanvas = $('fireworks-canvas');
+      skyshotContext = skyshotCanvas.getContext('2d');
+      overlay.classList.add('active');
+      overlay.setAttribute('aria-hidden', 'false');
+      $('close-skyshow').focus({ preventScroll: true });
+      resizeSkyshotCanvas();
+      skyshotContext.clearRect(0, 0, skyshotWidth, skyshotHeight);
+
+      if (prefersReducedMotion) {
+        drawStaticSkyshots();
+      } else {
+        const start = performance.now();
+        skyshotPreviousFrameAt = start;
+        skyshotNextLaunchAt = start + 100;
+        skyshotStopLaunchingAt = start + 11500;
+        // Start with a cluster so the celebration fills the screen immediately.
+        for (let i = 0; i < 7; i++) launchSkyshot();
+        skyshotFrame = requestAnimationFrame(animateSkyshots);
+      }
+      // Keep the celebration visible long enough to enjoy, then return to the countdown.
+      skyshotCloseTimer = setTimeout(() => stopSkyshotShow(true), prefersReducedMotion ? 8000 : 16000);
+    }
+
+    function stopSkyshotShow(hide = true) {
+      skyshotActive = false;
+      clearTimeout(skyshotCloseTimer);
+      skyshotCloseTimer = null;
+      if (skyshotFrame) cancelAnimationFrame(skyshotFrame);
+      skyshotFrame = null;
+      skyshotParticles = [];
+      if (skyshotContext && skyshotCanvas) skyshotContext.clearRect(0, 0, skyshotWidth, skyshotHeight);
+      if (hide) {
+        const overlay = $('skyshow-overlay');
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+        if (skyshotReturnFocus && typeof skyshotReturnFocus.focus === 'function' && document.contains(skyshotReturnFocus)) {
+          skyshotReturnFocus.focus({ preventScroll: true });
+        }
+      }
+    }
+
+    function updateCountdown() {
+      if (!targetISO) return;
+      const now = new Date();
+      const today = todayISO();
+      const isDiwaliToday = targetMode === 'diwali' && targetISO === today;
+      const remaining = istMidnight(targetISO).getTime() - now.getTime();
+      const targetKey = `${targetMode}:${targetISO}`;
+      if (targetKey !== lastCountdownTargetKey) {
+        lastCountdownTargetKey = targetKey;
+        lastRemainingForTarget = remaining;
+      } else if (lastRemainingForTarget !== null && lastRemainingForTarget > 0 && remaining <= 0 && !celebratedTargets.has(targetKey)) {
+        celebratedTargets.add(targetKey);
+        startSkyshotShow();
+      }
+      lastRemainingForTarget = remaining;
+      if (isDiwaliToday) {
+        ['days','hours','minutes','seconds'].forEach(id => $(id).textContent = '00');
+        $('countdown-status').textContent = 'It’s Diwali today — Shubh Deepavali!';
+        $('countdown-status').style.color = 'var(--gold)';
+      } else if (remaining <= 0) {
+        ['days','hours','minutes','seconds'].forEach(id => $(id).textContent = '00');
+        $('countdown-status').textContent = 'That date has passed. Choose another date or return to the next Diwali.';
+        $('countdown-status').style.color = 'var(--muted)';
+      } else {
+        const total = Math.floor(remaining / 1000);
+        const days = Math.floor(total / 86400);
+        const hours = Math.floor((total % 86400) / 3600);
+        const minutes = Math.floor((total % 3600) / 60);
+        const seconds = total % 60;
+        $('days').textContent = String(days).padStart(2,'0');
+        $('hours').textContent = String(hours).padStart(2,'0');
+        $('minutes').textContent = String(minutes).padStart(2,'0');
+        $('seconds').textContent = String(seconds).padStart(2,'0');
+        const calendarDays = diffCalendarDays(today, targetISO);
+        $('countdown-status').textContent = targetMode === 'diwali'
+          ? `That’s ${calendarDays} calendar day${calendarDays === 1 ? '' : 's'} away. Timer uses India Standard Time.`
+          : `${calendarDays < 0 ? `${Math.abs(calendarDays)} calendar day${Math.abs(calendarDays) === 1 ? '' : 's'} ago` : `${calendarDays} calendar day${calendarDays === 1 ? '' : 's'} away`} · Timer uses India Standard Time.`;
+        $('countdown-status').style.color = 'var(--green)';
+      }
+      if (targetMode === 'diwali' && today > targetISO) setDiwaliTarget();
+    }
+    function updateIndiaClock() {
+      $('india-clock').textContent = new Intl.DateTimeFormat('en-IN', {
+        timeZone: IST, weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true
+      }).format(new Date()) + ' IST';
+    }
+    function showToast(message) {
+      const toast = $('toast'); toast.textContent = message; toast.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+    }
+    function eventDateTimeLocal(iso, time = '00:00:00') {
+      // iCalendar floating local time, labeled to avoid timezone misinterpretation by many calendar apps.
+      return iso.replaceAll('-', '') + 'T' + time.replaceAll(':', '') + '';
+    }
+    function downloadCalendarEvent() {
+      if (!targetISO) { showToast('Choose a target date first.'); return; }
+      const p = isoParts(targetISO);
+      const title = targetMode === 'diwali' ? `Diwali ${p.year}` : 'Countdown target';
+      const nextDay = new Date(Date.UTC(p.year, p.month - 1, p.day + 1));
+      const nextDate = isoFromParts(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate());
+      const pNext = isoParts(nextDate);
+      const dt = (iso) => iso.replaceAll('-', '');
+      const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+      const uid = `diwali-countdown-${targetISO}@local`;
+      const lines = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Diwali Countdown//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+        'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${dt(targetISO)}`,
+        `DTEND;VALUE=DATE:${dt(isoFromParts(pNext.year, pNext.month, pNext.day))}`,
+        `SUMMARY:${title}`, `DESCRIPTION:${targetMode === 'diwali' ? 'Diwali — Festival of Lights.' : 'Your selected countdown date.'}`,
+        'END:VEVENT', 'END:VCALENDAR'
+      ];
+      const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob); const a = document.createElement('a');
+      a.href = url; a.download = `${targetMode === 'diwali' ? 'Diwali' : 'Countdown'}-${p.year}.ics`;
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      showToast('Calendar event downloaded (.ics).');
+    }
+    async function copyCountdown() {
+      if (!targetISO) return;
+      const today = todayISO();
+      const delta = diffCalendarDays(today, targetISO);
+      const when = targetMode === 'diwali' ? 'until Diwali' : 'until my selected date';
+      const message = delta === 0 && targetMode === 'diwali'
+        ? `It’s Diwali today! Shubh Deepavali! (${formatDate(targetISO)})`
+        : delta >= 0 ? `${delta} calendar day${delta === 1 ? '' : 's'} ${when} — ${formatDate(targetISO)}.`
+        : `${formatDate(targetISO)} was ${Math.abs(delta)} day${Math.abs(delta) === 1 ? '' : 's'} ago.`;
+      try {
+        if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(message);
+        else {
+          const textarea = document.createElement('textarea'); textarea.value = message; textarea.style.position = 'fixed'; textarea.style.opacity = '0';
+          document.body.appendChild(textarea); textarea.select(); const ok = document.execCommand('copy'); textarea.remove();
+          if (!ok) throw new Error('Copy failed');
+        }
+        showToast('Countdown copied.');
+      } catch { showToast(message); }
+    }
+    function shiftMonth(amount) {
+      const d = new Date(Date.UTC(viewYear, viewMonth + amount, 1, 12));
+      viewYear = d.getUTCFullYear(); viewMonth = d.getUTCMonth(); renderCalendar();
+    }
+
+    // Start on today's month and select the next Diwali by default.
+    const todayParts = indiaParts(); viewYear = todayParts.year; viewMonth = todayParts.month - 1;
+    setDiwaliTarget();
+    if (!targetISO) {
+      $('target-date-label').textContent = 'Choose a Diwali date';
+      $('target-day-label').textContent = 'Select any date from the calendar';
+      renderCalendar();
+    }
+    updateIndiaClock();
+    setInterval(() => { updateIndiaClock(); updateCountdown(); }, 1000);
+    $('prev-month').addEventListener('click', () => shiftMonth(-1));
+    $('next-month').addEventListener('click', () => shiftMonth(1));
+    $('today-btn').addEventListener('click', () => {
+      const p = indiaParts(); viewYear = p.year; viewMonth = p.month - 1; selectedISO = todayISO();
+      renderCalendar();
+    });
+    $('set-date-btn').addEventListener('click', () => setCustomTarget($('custom-date').value));
+    $('custom-date').addEventListener('change', (e) => { if (e.target.value) setCustomTarget(e.target.value); });
+    $('next-diwali-btn').addEventListener('click', setDiwaliTarget);
+    $('add-calendar-btn').addEventListener('click', downloadCalendarEvent);
+    $('copy-btn').addEventListener('click', copyCountdown);
+    $('preview-skyshots').addEventListener('click', startSkyshotShow);
+    $('replay-skyshots').addEventListener('click', startSkyshotShow);
+    $('close-skyshow').addEventListener('click', () => stopSkyshotShow(true));
+    $('skyshow-overlay').addEventListener('click', (event) => {
+      if (event.target === $('skyshow-overlay')) stopSkyshotShow(true);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && $('skyshow-overlay').classList.contains('active')) stopSkyshotShow(true);
+    });
+    window.addEventListener('resize', () => {
+      if (skyshotActive) resizeSkyshotCanvas();
+    });
+  </script>
+</body>
+</html>
