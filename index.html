@@ -354,29 +354,48 @@
       // iCalendar floating local time, labeled to avoid timezone misinterpretation by many calendar apps.
       return iso.replaceAll('-', '') + 'T' + time.replaceAll(':', '') + '';
     }
-    function downloadCalendarEvent() {
-      if (!targetISO) { showToast('Choose a target date first.'); return; }
-      const p = isoParts(targetISO);
-      const title = targetMode === 'diwali' ? `Diwali ${p.year}` : 'Countdown target';
-      const nextDay = new Date(Date.UTC(p.year, p.month - 1, p.day + 1));
-      const nextDate = isoFromParts(nextDay.getUTCFullYear(), nextDay.getUTCMonth() + 1, nextDay.getUTCDate());
-      const pNext = isoParts(nextDate);
-      const dt = (iso) => iso.replaceAll('-', '');
-      const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-      const uid = `diwali-countdown-${targetISO}@local`;
-      const lines = [
-        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Diwali Countdown//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-        'BEGIN:VEVENT', `UID:${uid}`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${dt(targetISO)}`,
-        `DTEND;VALUE=DATE:${dt(isoFromParts(pNext.year, pNext.month, pNext.day))}`,
-        `SUMMARY:${title}`, `DESCRIPTION:${targetMode === 'diwali' ? 'Diwali — Festival of Lights.' : 'Your selected countdown date.'}`,
-        'END:VEVENT', 'END:VCALENDAR'
-      ];
-      const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-      const url = URL.createObjectURL(blob); const a = document.createElement('a');
-      a.href = url; a.download = `${targetMode === 'diwali' ? 'Diwali' : 'Countdown'}-${p.year}.ics`;
-      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
-      showToast('Calendar event downloaded (.ics).');
-    }
+    
+function downloadCalendarEvent() {
+  if (!targetISO) {
+    showToast('Choose a target date first.');
+    return;
+  }
+
+  const year = Number(targetISO.slice(0, 4));
+  const month = Number(targetISO.slice(5, 7)) - 1;
+  const day = Number(targetISO.slice(8, 10));
+
+  // Google Calendar uses YYYYMMDD dates.
+  const startDate = targetISO.replaceAll('-', '');
+
+  const nextDay = new Date(Date.UTC(year, month, day + 1));
+  const endDate = [
+    nextDay.getUTCFullYear(),
+    String(nextDay.getUTCMonth() + 1).padStart(2, '0'),
+    String(nextDay.getUTCDate()).padStart(2, '0')
+  ].join('');
+
+  const title = targetMode === 'diwali'
+    ? `Diwali ${year} — Festival of Lights`
+    : 'My Countdown Event';
+
+  const details = targetMode === 'diwali'
+    ? 'Celebrate Diwali, the Festival of Lights!'
+    : 'An event from the Diwali Countdown website.';
+
+  const url = new URL(
+    'https://calendar.google.com/calendar/render'
+  );
+
+  url.searchParams.set('action', 'TEMPLATE');
+  url.searchParams.set('text', title);
+  url.searchParams.set('dates', `${startDate}/${endDate}`);
+  url.searchParams.set('details', details);
+  url.searchParams.set('ctz', 'Asia/Kolkata');
+
+  window.open(url.toString(), '_blank', 'noopener,noreferrer');
+}
+
     async function copyCountdown() {
       if (!targetISO) return;
       const today = todayISO();
